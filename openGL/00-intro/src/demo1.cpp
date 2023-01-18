@@ -11,6 +11,11 @@
 void display()
 
 {
+	static int i = 0;
+	
+	i++; 
+
+	cout << "showing " << i << endl;
 }
 
 
