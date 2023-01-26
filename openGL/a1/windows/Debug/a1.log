@@ -1,13 +1,2 @@
-﻿  asteroid.cpp
-  fg_stroke.cpp
-  gpuProgram.cpp
-  linalg.cpp
-  main.cpp
-  object.cpp
-  shell.cpp
-  ship.cpp
-  strokefont.cpp
-  world.cpp
-  Generating Code...
-  glad.c
+﻿  object.cpp
   a1.vcxproj -> C:\Users\sienn\Documents\School\Forth year 2nd sem\454\cmpe454\openGL\a1\windows\Debug\a1.exe

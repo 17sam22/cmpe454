@@ -12,64 +12,50 @@
 // Set up an object by creating a VAO and rewriting the object
 // vertices so that it is centred at (0,0).
 
-void Object::setupVAO( float objectVerts[], float objectWidth )
+void Object::setupVAO(float objectVerts[], float objectWidth)
 
 {
-  // ---- Rewrite the object vertices ----
+    // ---- Rewrite the object vertices ----
 
-  // Find the bounding box of the object
+    // Find the bounding box of the object
 
-  vec3 min = vec3( objectVerts[0], objectVerts[1], 0 );
-  vec3 max = vec3( objectVerts[0], objectVerts[1], 0 );
+    vec3 min = vec3(objectVerts[0], objectVerts[1], 0);
+    vec3 max = vec3(objectVerts[0], objectVerts[1], 0);
 
-  int i;
-  for (i=0; objectVerts[i] != 9999; i+=2) {
-    vec3 v( objectVerts[i], objectVerts[i+1], 0 );
-    if (v.x < min.x) min.x = v.x;
-    if (v.x > max.x) max.x = v.x;
-    if (v.y < min.y) min.y = v.y;
-    if (v.y > max.y) max.y = v.y;
-  }
+    int i;
+    for (i = 0; objectVerts[i] != 9999; i += 2) {
+        vec3 v(objectVerts[i], objectVerts[i + 1], 0);
+        if (v.x < min.x) min.x = v.x;
+        if (v.x > max.x) max.x = v.x;
+        if (v.y < min.y) min.y = v.y;
+        if (v.y > max.y) max.y = v.y;
+    }
 
-  // Rewrite the model vertices so that the object is centred at (0,0)
-  // and has width objectWidth
+    // Rewrite the model vertices so that the object is centred at (0,0)
+    // and has width objectWidth
 
-  float s = objectWidth / (max.x - min.x);
- 
-  mat4 modelToOriginTransform
-    = scale( s, s, 1 )
-    * translate( -0.5*(min.x+max.x), -0.5*(min.y+max.y), 0 );
+    float s = objectWidth / (max.x - min.x);
 
-  for (int i=0; objectVerts[i] != 9999; i+=2) {
-    vec4 newV = modelToOriginTransform * vec4( objectVerts[i], objectVerts[i+1], 0.0, 1.0 );
-    objectVerts[i]   = newV.x / newV.w;
-    objectVerts[i+1] = newV.y / newV.w;
-  }
+    mat4 modelToOriginTransform
+        = scale(s, s, 1)
+        * translate(-0.5 * (min.x + max.x), -0.5 * (min.y + max.y), 0);
 
-  // Store segments in the object model for later
+    for (int i = 0; objectVerts[i] != 9999; i += 2) {
+        vec4 newV = modelToOriginTransform * vec4(objectVerts[i], objectVerts[i + 1], 0.0, 1.0);
+        objectVerts[i] = newV.x / newV.w;
+        objectVerts[i + 1] = newV.y / newV.w;
+    }
 
-  for (int i=0; objectVerts[i] != 9999; i+=4)
-    segments.push_back( Segment( vec3( objectVerts[i],   objectVerts[i+1], 0 ),
-				 vec3( objectVerts[i+2], objectVerts[i+3], 0 ) ) );
+    // Store segments in the object model for later
 
-  // ---- Create a VAO for this object ----
+    for (int i = 0; objectVerts[i] != 9999; i += 4)
+        segments.push_back(Segment(vec3(objectVerts[i], objectVerts[i + 1], 0),
+            vec3(objectVerts[i + 2], objectVerts[i + 3], 0)));
 
-  // YOUR CODE HERE
-  GLuint VBO; 
-  glGenBuffers(1, &VBO);
-  glBindBuffer(GL_ARRAY_BUFFER, VBO); 
+    // ---- Create a VAO for this object ----
 
-  glBindVertexArray(objectVAO);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-  glEnableVertexAttribArray(0);
-
-  glBindVertexArray(0);
-
-
-
-  
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
 }
 
 
@@ -79,15 +65,42 @@ void Object::setupVAO( float objectVerts[], float objectWidth )
 void Object::draw( mat4 &worldToViewTransform, GPUProgram *gpuProg )
 
 {
-  // YOUR CODE HERE (set the transform)                                                                      
+  // YOUR CODE HERE (set the transform)  
 
-  mat4 modelToViewTransform;
+    mat4 modelToViewTransform;
+      
+    modelToViewTransform = worldToViewTransform * modelToWorldTransform();
 
   // Tell the shaders about the model-to-view transform.  (See MVP in asteroids.vert.)                       
 
   gpuProg->setMat4( "MVP", modelToViewTransform );
 
+  GLuint VBO;
+  glGenBuffers(1, &VBO);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+  float* objectVerts = new float[segments.size() * 4]();
+  for (unsigned int i = 0; i < segments.size(); i++) {
+      objectVerts[i * 4 + 0] = segments[i].head.x;
+      objectVerts[i * 4 + 1] = segments[i].head.y;
+      objectVerts[i * 4 + 2] = segments[i].tail.x;
+      objectVerts[i * 4 + 3] = segments[i].tail.y;
+  }
+
+  glBufferData(GL_ARRAY_BUFFER, segments.size() * 4 * sizeof(float), objectVerts, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(0);
+
   // YOUR CODE HERE (call OpenGL to draw the VAO of this object)  
+  // Draw
+  glDrawArrays(GL_LINES, 0, segments.size()*2);
+  glBindVertexArray(0);
+
+  // Deactivate the shaders
+  glDisableVertexAttribArray(0);
+  glDeleteBuffers(1, &VBO);
+  glDeleteVertexArrays(1, &VAO);
 
 }
 
@@ -95,9 +108,13 @@ void Object::draw( mat4 &worldToViewTransform, GPUProgram *gpuProg )
 mat4 Object::modelToWorldTransform() const
 
 {
-  // YOUR CODE HERE
-  
-  return m;
+    mat4 S = scale(scaleFactor, scaleFactor, 0);   // scale by world size 
+    mat4 R = rotate(orientation.angle(), vec3(0, 0, 1)); // rotate by theta radians about (0,0,1)
+    mat4 T = translate(position.x, position.y, 0); // translate from the origin to (-0.5,0.5,0)
+
+    mat4 M = S * R * T;
+
+  return M;
 }
 
 
